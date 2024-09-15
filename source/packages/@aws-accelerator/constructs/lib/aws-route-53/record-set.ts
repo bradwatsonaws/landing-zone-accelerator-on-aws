@@ -13,6 +13,8 @@
 
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import * as dns from 'dns';
+import { promisify } from 'util';
 
 import { IHostedZone } from './hosted-zone';
 
@@ -23,6 +25,7 @@ export interface IRecordSet extends cdk.IResource {
 export interface RecordSetProps {
   readonly type: string;
   readonly name: string;
+  readonly govCloud?: boolean;
 
   readonly hostedZone: IHostedZone;
   readonly dnsName?: string;
@@ -34,18 +37,48 @@ export class RecordSet extends cdk.Resource implements IRecordSet {
 
   constructor(scope: Construct, id: string, props: RecordSetProps) {
     super(scope, id);
+  
 
-    const resource = new cdk.aws_route53.CfnRecordSet(this, 'Resource', {
-      type: props.type,
-      name: props.name,
-      hostedZoneId: props.hostedZone.hostedZoneId,
-      aliasTarget: {
-        dnsName: props.dnsName ?? '',
-        hostedZoneId: props.hostedZoneId ?? '',
-      },
-    });
+    let resource: cdk.aws_route53.CfnRecordSet;
+
+    // if (!props.govCloud) {
+    //   resource = new cdk.aws_route53.CfnRecordSet(this, 'Resource', {
+    //     type: props.type,
+    //     name: props.name,
+    //     hostedZoneId: props.hostedZone.hostedZoneId,
+    //     aliasTarget: {
+    //       dnsName: props.dnsName ?? '',
+    //       hostedZoneId: props.hostedZoneId ?? '',
+    //     },
+    //   });
+    // } else {
+      // Create a placeholder resource
+      resource = new cdk.aws_route53.CfnRecordSet(this, 'Resource', {
+        type: props.type,
+        name: props.name,
+        hostedZoneId: props.hostedZone.hostedZoneId,
+        resourceRecords: ['placeholder'],
+      });
+
+      // Resolve DNS asynchronously and update the resource
+      this.resolveDnsAndUpdateResource(props, resource);
+    // }
 
     this.recordSetId = resource.ref;
+  }
+
+  private async resolveDnsAndUpdateResource(
+    props: RecordSetProps,
+    resource: cdk.aws_route53.CfnRecordSet
+  ): Promise<void> {
+    const resolve = promisify(dns.resolve);
+
+    try {
+      const addresses = await resolve(props.dnsName!, 'A');
+      resource.addPropertyOverride('ResourceRecords', addresses);
+    } catch (error) {
+      // Handle the error appropriately (e.g., set a default value or throw)
+    }
   }
 
   static getHostedZoneNameFromService(service: string, region: string): string {
