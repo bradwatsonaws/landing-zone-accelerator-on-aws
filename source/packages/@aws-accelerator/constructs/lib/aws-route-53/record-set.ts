@@ -62,7 +62,7 @@ export class RecordSet extends cdk.Resource implements IRecordSet {
 
       // Resolve DNS asynchronously and update the resource
       this.resolveDnsAndUpdateResource(props, resource);
-    // }
+    // } testing DNS A.
 
     this.recordSetId = resource.ref;
   }
