@@ -19,7 +19,7 @@ import { promisify } from 'util';
 import { IHostedZone } from './hosted-zone';
 // import { AcceleratorStackProps } from '../../../accelerator/lib/stacks/accelerator-stack';
 // import * as winston from 'winston';
-import { createLogger } from '../../..//utils/lib/logger';
+// import { createLogger } from '../../..//utils/lib/logger';
 
 export interface IRecordSet extends cdk.IResource {
   readonly recordSetId: string;
@@ -72,7 +72,7 @@ export class RecordSet extends cdk.Resource implements IRecordSet {
         type: props.type,
         name: props.name,
         hostedZoneId: props.hostedZone.hostedZoneId,
-        resourceRecords: addresses,
+        resourceRecords: [addresses],
       });
 
       // new route53.RecordSet(this, 'Route53RecordSet', {
