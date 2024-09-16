@@ -44,6 +44,9 @@ export class RecordSet extends cdk.Resource implements IRecordSet {
   constructor(scope: Construct, id: string, props: RecordSetProps) {
     super(scope, id);
 
+    console.log("Dns Type: ", props.type);
+    console.log("Name: ", props.name);
+    console.log("Hosted Zone ID: ", props.hostedZone.hostedZoneId);
     const resource = new cdk.aws_route53.CfnRecordSet(this, 'Resource', {
       type: props.type,
       name: props.name,
@@ -82,6 +85,7 @@ export class RecordSet extends cdk.Resource implements IRecordSet {
   // }
 
   private async resolveDns(props: RecordSetProps) {
+    console.log("Dns Name: ", props.dnsName);
     try {
       const addresses = await resolve(props.dnsName!, 'A');
       // this.logger.info("Addresses: ", addresses);
