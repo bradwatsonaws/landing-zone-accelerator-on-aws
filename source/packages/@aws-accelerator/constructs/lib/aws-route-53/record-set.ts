@@ -17,8 +17,8 @@ import * as dns from 'dns';
 import { promisify } from 'util';
 
 import { IHostedZone } from './hosted-zone';
-import { AcceleratorStackProps } from '../../../accelerator/lib/stacks/accelerator-stack';
-import * as winston from 'winston';
+// import { AcceleratorStackProps } from '../../../accelerator/lib/stacks/accelerator-stack';
+// import * as winston from 'winston';
 import { createLogger } from '../../..//utils/lib/logger';
 
 export interface IRecordSet extends cdk.IResource {
@@ -35,16 +35,16 @@ export interface RecordSetProps {
   readonly hostedZoneId?: string;
 }
 
-process.on('uncaughtException', err => {
-  const logger = createLogger(['accelerator']);
-  logger.error(err);
-  throw new Error('Synthesis failed');
-});
+// process.on('uncaughtException', err => {
+//   const logger = createLogger(['accelerator']);
+//   logger.error(err);
+//   throw new Error('Synthesis failed');
+// });
 
 const resolve = promisify(dns.resolve);
 
 export class RecordSet extends cdk.Resource implements IRecordSet {
-  protected logger: winston.Logger;
+  // protected logger: winston.Logger;
   readonly recordSetId: string;
 
   constructor(scope: Construct, id: string, props: RecordSetProps) {
@@ -106,10 +106,12 @@ export class RecordSet extends cdk.Resource implements IRecordSet {
   private async resolveDns(props: RecordSetProps) {
     try {
       const addresses = await resolve(props.dnsName!, 'A');
-      this.logger.info("Addresses: ", addresses);
+      // this.logger.info("Addresses: ", addresses);
+      console.log("Addresses: ", addresses);
       return addresses;
     } catch (error) {
-      this.logger.error(error);
+      // this.logger.error(error);
+      console.log(error);
     }
     return null;
   }
