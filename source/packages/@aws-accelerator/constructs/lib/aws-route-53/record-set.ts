@@ -17,6 +17,9 @@ import * as dns from 'dns';
 import { promisify } from 'util';
 
 import { IHostedZone } from './hosted-zone';
+import { AcceleratorStackProps } from '../../../accelerator/lib/stacks/accelerator-stack';
+import * as winston from 'winston';
+import { createLogger } from '../../..//utils/lib/logger';
 
 export interface IRecordSet extends cdk.IResource {
   readonly recordSetId: string;
@@ -32,7 +35,16 @@ export interface RecordSetProps {
   readonly hostedZoneId?: string;
 }
 
+process.on('uncaughtException', err => {
+  const logger = createLogger(['accelerator']);
+  logger.error(err);
+  throw new Error('Synthesis failed');
+});
+
+const resolve = promisify(dns.resolve);
+
 export class RecordSet extends cdk.Resource implements IRecordSet {
+  protected logger: winston.Logger;
   readonly recordSetId: string;
 
   constructor(scope: Construct, id: string, props: RecordSetProps) {
@@ -52,33 +64,54 @@ export class RecordSet extends cdk.Resource implements IRecordSet {
     //     },
     //   });
     // } else {
+
+      // Resolve DNS asynchronously and update the resource
+      const addresses = this.resolveDns(props);
       // Create a placeholder resource
       resource = new cdk.aws_route53.CfnRecordSet(this, 'Resource', {
         type: props.type,
         name: props.name,
         hostedZoneId: props.hostedZone.hostedZoneId,
-        resourceRecords: ['placeholder'],
+        resourceRecords: addresses,
       });
 
-      // Resolve DNS asynchronously and update the resource
-      this.resolveDnsAndUpdateResource(props, resource);
+      // new route53.RecordSet(this, 'Route53RecordSet', {
+      //   recordType: route53.RecordType.A,
+      //   target: route53.RecordTarget.fromIpAddresses('172.31.50.219', '172.31.47.113', '172.31.76.27'),
+      //   zone: this.phz,
+      //   recordName: 'sts.us-east-1.amazonaws.com',
+      //   ttl: cdk.Duration.seconds(300),
+      // });
+
+
     // } testing DNS A.
 
     this.recordSetId = resource.ref;
   }
 
-  private async resolveDnsAndUpdateResource(
-    props: RecordSetProps,
-    resource: cdk.aws_route53.CfnRecordSet
-  ): Promise<void> {
-    const resolve = promisify(dns.resolve);
+  // private async resolveDns(
+  //   props: RecordSetProps
+  // ): Promise<void> {
+  //   const resolve = promisify(dns.resolve);
 
+  //   try {
+  //     const addresses = await resolve(props.dnsName!, 'A');
+  //     return addresses;
+  //     // resource.addPropertyOverride('ResourceRecords', addresses);
+  //   } catch (error) {
+  //     // Handle the error appropriately (e.g., set a default value or throw)
+  //   }
+  // }
+
+  private async resolveDns(props: RecordSetProps) {
     try {
       const addresses = await resolve(props.dnsName!, 'A');
-      resource.addPropertyOverride('ResourceRecords', addresses);
+      this.logger.info("Addresses: ", addresses);
+      return addresses;
     } catch (error) {
-      // Handle the error appropriately (e.g., set a default value or throw)
+      this.logger.error(error);
     }
+    return null;
   }
 
   static getHostedZoneNameFromService(service: string, region: string): string {
